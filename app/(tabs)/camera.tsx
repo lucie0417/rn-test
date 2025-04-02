@@ -1,0 +1,124 @@
+import { useRef, useState } from 'react';
+import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions, CameraOrientation } from 'expo-camera';
+import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import * as MediaLibrary from 'expo-media-library';
+
+export default function App() {
+    const [permission, requestPermission] = useCameraPermissions(); // 相機權限
+    const [micPermission, requestMicPermission] = useMicrophonePermissions(); // 麥克風權限
+    const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions(); // Camera Roll(檔案存取)權限
+    const [photo, setPhoto] = useState<string | null>(null);
+    const [orientation, setOrientation] = useState<CameraOrientation>('landscapeLeft');
+    const [facing, setFacing] = useState<CameraType>('back');
+    const cameraRef = useRef<any>(null);
+
+    if (!permission) {
+        return <View />;
+    }
+
+    if (!permission.granted) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.container}>
+                    <Text style={styles.message}>We need your permission to show the camera and record audio.</Text>
+                    <Button onPress={requestPermission} title="Camera grant permission" />
+                    <Button onPress={requestMicPermission} title="Microphone grant permission" color="#841584" />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    function toggleCameraFacing() {
+        setFacing(current => (current === 'back' ? 'front' : 'back'));
+    }
+
+    const takePicture = async () => {
+        if (!mediaPermission?.granted) {
+            await requestMediaPermission();
+        }
+
+        if (cameraRef.current) {
+            try {
+                const photo = await cameraRef.current.takePictureAsync();
+                const asset = await MediaLibrary.createAssetAsync(photo.uri);
+                setPhoto(asset.uri);
+                console.log('asset', asset);
+            } catch (error) {
+                console.error('takePicture Error', error);
+            }
+        }
+    }
+
+    return (
+        <View style={styles.container}>
+            {photo ? (
+                <View style={styles.previewContainer}>
+                    {photo && <Image source={{ uri: photo }} style={styles.preview} />}
+                    <Button title="Take Another Picture" onPress={() => setPhoto(null)} />
+                </View>
+            ) : (
+                <CameraView
+                    style={styles.camera}
+                    ref={cameraRef}
+                    facing={facing}
+                    responsiveOrientationWhenOrientationLocked={true}
+                    onResponsiveOrientationChanged={(e) => setOrientation(e.orientation)}>
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+                            <Text style={styles.text}>Flip Camera</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={takePicture}>
+                            <Text style={styles.text}>Take Picture</Text>
+                        </TouchableOpacity>
+                    </View>
+                </CameraView>
+            )}
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#000',
+    },
+    message: {
+        color: '#fff',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    camera: {
+        flex: 1,
+        width: '100%',
+    },
+    buttonContainer: {
+        flex: 1,
+        backgroundColor: 'transparent',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'flex-end',
+        marginBottom: 50,
+    },
+    button: {
+        backgroundColor: '#fff',
+        padding: 10,
+        borderRadius: 5,
+    },
+    text: {
+        color: '#000',
+        fontWeight: 'bold',
+    },
+    previewContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#000',
+    },
+    preview: {
+        width: '100%',
+        height: '80%',
+        resizeMode: 'contain',
+    },
+});
