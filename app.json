@@ -49,6 +49,20 @@
           "savePhotosPermission": "為確保功能正常運作，系統需要您同意授予媒體檔案存取權限。",
           "isAccessMediaLocationEnabled": true
         }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": false,
+          "android": {
+            "enableFTS": false,
+            "useSQLCipher": false
+          },
+          "ios": {
+            "customBuildFlags": ["-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"]
+          }
+        }
       ]
     ],
     "experiments": {
