@@ -41,7 +41,7 @@ export default function gpsReact() {
             const { latitude, longitude } = location.coords;
 
             const message = JSON.stringify({
-                type: 'LOCATION_INFO',
+                status: 'LOCATION_INFO',
                 latitude,
                 longitude,
             });

@@ -19,6 +19,7 @@ export default function App() {
     const cameraRef = useRef<any>(null);
     const webViewRef = useRef<WebView>(null);
 
+
     if (!permission) {
         return <View />;
     }
@@ -35,11 +36,13 @@ export default function App() {
         );
     }
 
-    const handleWebViewMessage = async (e: any) => {
+    const handleMessage = async (e: any) => {
         try {
-            const data = JSON.parse(e.nativeEvent.data);
-            if (data.type === 'OPEN_CAMERA_FROM_WEB') {
-                console.log(JSON.stringify(e.nativeEvent.data));
+            const { action, payload } = JSON.parse(e.nativeEvent.data);
+
+            if (action === 'openCamera') {
+                console.log('action', action, 'payload', payload);
+                setPhoto(null);
                 setShowCamera(true);
             }
         } catch (error) {
@@ -61,24 +64,27 @@ export default function App() {
                 const photo = await cameraRef.current.takePictureAsync();
                 const asset = await MediaLibrary.createAssetAsync(photo.uri);
                 setPhoto(asset.uri);
-                setShowCamera(false);
 
-                console.log('sdfsfdfsfds', webViewRef.current);
+                const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
 
-                if (!webViewRef.current) {
-                    const message = JSON.stringify({
-                        type: 'PHOTO_SENT_SUCCESS',
-                        photo: 'https://images.unsplash.com/photo-1743078344181-6eeea5796e8d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-                    });
-                    // webViewRef.current?.postMessage(message);
+                const message = JSON.stringify({
+                    status: 'sendPhoto',
+                    message: '傳送照片',
+                    content: `https://unsplash.com/photos/a-cozy-kitchen-with-cooking-utensils-eNBXKqj-88M`,
+                });
 
-                    console.log('message', message);
-                }
-
+                
                 setTimeout(() => {
-
-                    // setShowCamera(false);
-                }, 2000);
+                    setShowCamera(false);
+                    webViewRef.current?.postMessage(JSON.stringify({
+                        status: 'sendPhoto',
+                        message: '傳送照片',
+                        content: `https://unsplash.com/photos/a-cozy-kitchen-with-cooking-utensils-eNBXKqj-88M`,
+                    }));
+                    console.log('發送到Web', message);
+                }, 100);
             } catch (error) {
                 console.error('takePicture Error', error);
             }
@@ -98,41 +104,31 @@ export default function App() {
         <SafeAreaView style={styles.container}>
             <View style={styles.container}>
                 {showCamera ? (
-                    photo ? (
-                        <View style={styles.previewContainer}>
-                            {photo &&
-                                <Image
-                                    source={{ uri: photo }}
-                                    style={styles.preview}
-                                    contentFit={'contain'} />}
-                            <Button title="Take Another Picture" onPress={() => setPhoto(null)} />
+                    // 顯示相機
+                    <CameraView
+                        style={styles.camera}
+                        ref={cameraRef}
+                        facing={facing}
+                        responsiveOrientationWhenOrientationLocked={true}
+                        onResponsiveOrientationChanged={(e) => setOrientation(e.orientation)}
+                    >
+                        <View style={styles.buttonContainer}>
+                            <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+                                <Text style={styles.text}>Flip Camera</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.button} onPress={takePicture}>
+                                <Text style={styles.text}>Take Picture</Text>
+                            </TouchableOpacity>
                         </View>
-                    ) : (
-                        <CameraView
-                            style={styles.camera}
-                            ref={cameraRef}
-                            facing={facing}
-                            mute={true}
-                            responsiveOrientationWhenOrientationLocked={true}
-                            onResponsiveOrientationChanged={(e) => setOrientation(e.orientation)}
-                        >
-                            <View style={styles.buttonContainer}>
-                                <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-                                    <Text style={styles.text}>Flip Camera222</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.button} onPress={takePicture}>
-                                    <Text style={styles.text}>Take Picture</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </CameraView>
-                    )
+                    </CameraView>
                 ) : (
+                    // 顯示 WebView
                     <WebView
-                        useWebkit
+                        ref={webViewRef}
                         style={styles.webview}
-                        source={{ uri: `https://mdev.houseflow.tw/exploreMap?t=${Date.now()}` }}
+                        source={{ uri: `https://mdev.houseflow.tw?t=${Date.now()}` }}
                         mediaPlaybackRequiresUserAction={false}
-                        onMessage={handleWebViewMessage}
+                        onMessage={handleMessage}
                     />
                 )}
             </View>

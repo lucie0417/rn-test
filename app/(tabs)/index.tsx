@@ -4,11 +4,13 @@ import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from 'expo-sqlite/kv-store';
 import * as Application from 'expo-application';
+import * as Device from 'expo-device';
 
 export default function HomeScreen() {
   const webViewRef = useRef<WebView>(null);
-  const plateformOS = Platform.OS;
-  const osVersion = Platform.Version;
+  const plateformOS = Platform.OS; // 裝置類型
+  const osVersion = Device.osVersion; // 裝置版本號
+  const osModelName = Device.modelName; // 裝置型號
 
   const [deviceId, setDeviceId] = useState<string | null>(null);
 
@@ -41,19 +43,14 @@ export default function HomeScreen() {
 
 
       if (action === 'getPlatformInfo') {
-        console.log('傳送裝置資訊給Web:', plateformOS, osVersion, deviceId);
+        console.log('傳送裝置資訊給Web:', plateformOS, osVersion, osModelName, deviceId);
         webViewRef.current?.postMessage(
           JSON.stringify(
             {
               status: 'sendDeviceInfo',
-              content: { plateformOS, osVersion, deviceId },
+              content: { plateformOS, osVersion, osModelName, deviceId },
               message: '傳送裝置資訊'
             }));
-
-        // webViewRef.current?.injectJavaScript(`
-        //   window.postMessage(JSON.stringify({ status: 'sendDeviceInfo',  content: { plateformOS, osVersion, nowTime }, message: '傳送裝置資訊' }));
-        //   true;
-        // `);        
       }
 
       if (action === 'saveToken') {
